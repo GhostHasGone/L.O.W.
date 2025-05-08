@@ -72,21 +72,18 @@ class LowballGenerator(QWidget):
         form = QFormLayout()
         self.purse_input = QLineEdit(); self.purse_input.setPlaceholderText('Default: 200m')
         self.min_input = QLineEdit(); self.min_input.setPlaceholderText('Default: 25m')
-
-        form.addRow('Purse:', self.purse_input)
-        form.addRow('Min:', self.min_input)
+        form.addRow(' Purse: ', self.purse_input)
+        form.addRow(' Min: ', self.min_input)
         layout.addLayout(form)
 
         cb_layout = QGridLayout()
         cb_layout.setAlignment(Qt.AlignCenter)
-
         self.checkboxes = []
         labels = ['No Attributes', 'No Dyes', 'No Minions', 'Lvl 100 Pets']
         for i, label in enumerate(labels):
             cb = QCheckBox(label)
             cb_layout.addWidget(cb, i // 2, i % 2)
             self.checkboxes.append(cb)
-
         layout.addLayout(cb_layout)
 
         layout.addStretch()
@@ -110,12 +107,13 @@ class LowballGenerator(QWidget):
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-
         self.container = QFrame()
         self.message_layout = QVBoxLayout(self.container)
         self.message_layout.setSpacing(10)
 
+        self.copy_buttons = []
         self.message_edits = []
+
         for _ in range(5):
             row = QHBoxLayout()
             copy_btn = QPushButton('Copy')
@@ -124,10 +122,16 @@ class LowballGenerator(QWidget):
             line.setReadOnly(True)
             line.setCursorPosition(0)
             line.setAlignment(Qt.AlignLeft)
-            line.setStyleSheet("QLineEdit { qproperty-cursorPosition: 0; }")
-            copy_btn.clicked.connect(lambda _, e=line: QApplication.clipboard().setText(e.text()))
+
+            def make_handler(btn, edit):
+                return lambda: self.copy_to_clipboard(btn, edit)
+
+            copy_btn.clicked.connect(make_handler(copy_btn, line))
+
             row.addWidget(copy_btn)
             row.addWidget(line)
+
+            self.copy_buttons.append(copy_btn)
             self.message_edits.append(line)
             self.message_layout.addLayout(row)
 
@@ -137,8 +141,10 @@ class LowballGenerator(QWidget):
         nav_buttons = QHBoxLayout()
         self.back_btn = QPushButton('Back')
         self.more_btn = QPushButton('More')
-        self.back_btn.clicked.connect(lambda: self.stacked.setCurrentIndex(0))
+
+        self.back_btn.clicked.connect(self.go_back)
         self.more_btn.clicked.connect(self.generate_messages)
+
         nav_buttons.addStretch()
         nav_buttons.addWidget(self.back_btn)
         nav_buttons.addWidget(self.more_btn)
@@ -146,6 +152,15 @@ class LowballGenerator(QWidget):
 
         layout.addLayout(nav_buttons)
         self.stacked.addWidget(page)
+
+    def copy_to_clipboard(self, button, line_edit):
+        QApplication.clipboard().setText(line_edit.text())
+        button.setText("✓")
+
+    def go_back(self):
+        for btn in self.copy_buttons:
+            btn.setText("Copy")
+        self.stacked.setCurrentIndex(0)
 
     def parse_amount(self, text):
         match = re.match(r"([0-9]+(?:\.[0-9]+)?)([kmb]?)", text.lower().strip())
@@ -162,6 +177,9 @@ class LowballGenerator(QWidget):
         if purse is None or minimum is None:
             return
 
+        for btn in self.copy_buttons:
+            btn.setText("Copy")
+
         flags = [cb.text() for cb in self.checkboxes if cb.isChecked()]
         flag_strs = {
             "bar": " | ".join(flags),
@@ -177,25 +195,25 @@ class LowballGenerator(QWidget):
                 f"LOWBALLING {purse_raw} | Min: {min_raw} | {flag_strs['bar']} | VISIT ME",
                 f"LOWBALLING {purse_raw} → Min Value: {min_raw} → No: {flag_strs['dash']} → Come now!",
                 f"LOWBALLING {purse_raw} Purse | Min Price: {min_raw} | Conditions: {flag_strs['plus']} | /visit",
-                f"LOWBALLING {purse_raw} with {min_raw}+ item value | {flag_strs['slash']} | VISIT MY ISLAND",
-                f"LOWBALLING {purse_raw} - {min_raw} min - {flag_strs['bar']} - Fair prices!",
-                f"LOWBALLING {purse_raw} – Min {min_raw} – {flag_strs['dot']} – Come now!",
-                f"LOWBALLING {purse_raw} Purse | Taking {min_raw}+ items | {flag_strs['space']} | /visit",
-                f"LOWBALLING {purse_raw} | {min_raw} min | {flag_strs['dot']} | Fast trades!",
+                f"LOWBALLING {purse_raw} with items worth {min_raw}+ | {flag_strs['slash']} | VISIT MY ISLAND",
+                f"LOWBALLING {purse_raw} - Taking {min_raw}+ items - Skipping: {flag_strs['bar']} - Trade quick!",
+                f"LOWBALLING {purse_raw} – Min {min_raw} – Avoiding: {flag_strs['dot']} – Let’s go!",
+                f"LOWBALLING {purse_raw} | Accepting {min_raw}+ value only | Skipping {flag_strs['space']} | /visit",
+                f"LOWBALLING {purse_raw} Purse → {min_raw}+ item value → No {flag_strs['bar']} → Come by now!",
             ]
         else:
             templates = [
                 f"LOWBALLING {purse_raw} | Min: {min_raw} | VISIT ME",
                 f"LOWBALLING {purse_raw} → Min Value: {min_raw} → Come now!",
                 f"LOWBALLING {purse_raw} Purse | Min Price: {min_raw} | /visit",
-                f"LOWBALLING {purse_raw} with {min_raw}+ item value | VISIT MY ISLAND",
-                f"LOWBALLING {purse_raw} - {min_raw} min - Fair prices!",
-                f"LOWBALLING {purse_raw} – Min {min_raw} – Come now!",
-                f"LOWBALLING {purse_raw} Purse | Taking {min_raw}+ items | /visit",
-                f"LOWBALLING {purse_raw} | {min_raw} min | Fast trades!",
+                f"LOWBALLING {purse_raw} with items worth {min_raw}+ | VISIT MY ISLAND",
+                f"LOWBALLING {purse_raw} - Taking items priced {min_raw}+ - Fair offers!",
+                f"LOWBALLING {purse_raw} – Need {min_raw}+ gear – Come trade now!",
+                f"LOWBALLING {purse_raw} Purse → Looking for {min_raw}+ items → Visit!",
+                f"LOWBALLING {purse_raw} | Only {min_raw}+ items | Fast deals, /visit!",
             ]
 
-        extras = ["", "!!!", " pls hurry", " <3"]
+        extras = ["", "!", " — fast trades", " — visit now", " — don't miss it", " — quick deals", " — no junk pls"]
         selected = set()
         while len(selected) < 5:
             selected.add(random.choice(templates) + random.choice(extras))
