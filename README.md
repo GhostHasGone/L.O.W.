@@ -1,4 +1,4 @@
-# Lowball Message Generator
+# "LOW" - Lowballer Optimal Workflow
 
 **Lowball Message Generator** is a PyQt5-based desktop application designed to help users quickly generate customizable lowballing messages for Hypixel Skyblock. The application provides a user-friendly interface to input values, select rules, and generate formatted messages to bypass the spam filter on Hypixel.
 
